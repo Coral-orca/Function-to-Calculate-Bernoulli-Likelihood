@@ -4,6 +4,9 @@ library(dplyr)
 library(ggplot2)
 library(haven)
 
+# Example data for default plotting
+example <- data.frame("N(0,1)" = rnorm(100, 0, 1), "R(0,1)" = runif(100, 0, 1))
+
 # Define UI
 ui <- fluidPage(
   titlePanel("Interactive Plotting App"),
@@ -36,7 +39,7 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "input.plotType == 'histogram' || input.plotType == 'density'",
         textInput("fillColor", "Fill Color:", value = "coral"),
-        sliderInput("alpha", "Alpha:", min =0, max = 1, step = 0.1, value = 0.7)
+        sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
       
       # Input: Plot title
@@ -64,7 +67,7 @@ server <- function(input, output, session) {
   # Reactive expression for reading data from the uploaded file
   data <- reactive({
     inFile <- input$file
-    if (is.null(inFile)) return(NULL)
+    if (is.null(inFile)) return(example)
     
     # Checking the file extension and reading accordingly
     if (tools::file_ext(inFile$name) %in% c("csv", "xlsx")) {
@@ -150,10 +153,14 @@ server <- function(input, output, session) {
             ggtitle(input$plotTitle)
         }
       }
-    } else if (input$plotType %in% c("histogram", "density")) {
+    } else if (input$plotType %in% c("histogram")) {
       ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_histogram(fill = input$fillColor, bins = input$binWidth,
                        alpha = input$alpha) +
+        ggtitle(input$plotTitle)
+    } else if (input$plotType %in% c("density")) {
+      ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
+        geom_density(fill = input$fillColor, alpha = input$alpha) +
         ggtitle(input$plotTitle)
     }
   })
