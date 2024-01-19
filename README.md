@@ -6,5 +6,6 @@ This is a code stash. Definitely not something maintained regularly or environme
 
 ## Function Overview
 
-*bernoulli-likelihood:* A function to compute and plot the likelihood function for the Bernoulli Distribution.
-*excelesquer:* A shiny app to upload a dataset, and export single variable (histogram/density) or two variable (scatter/line) plots.
+**bernoulli-likelihood:** A function to compute and plot the likelihood function for the Bernoulli Distribution.
+
+**excelesquer:** A shiny app to upload a dataset, and export single variable (histogram/density) or two variable (scatter/line) plots.
