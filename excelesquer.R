@@ -25,6 +25,12 @@ ui <- fluidPage(
       uiOutput("variableSelectionX"),
       uiOutput("variableSelectionY"),
       uiOutput("plotTypeInput"),
+      
+      # Input: Theme selection
+      selectInput("plotTheme", "Select Plot Theme", 
+                  choices = c("theme_grey", "theme_bw", "theme_minimal", "theme_classic", "theme_linedraw", "theme_light", "theme_dark", "theme_void"),
+                  selected = "theme_grey"),
+      
       uiOutput("pointStyleInput"),
       
       # Conditional input for scatter plots
@@ -32,13 +38,19 @@ ui <- fluidPage(
         condition = "input.plotType == 'scatter'",
         checkboxInput("addJitter", "Add Jitter?", value = FALSE),
         numericInput("pointSize", "Point Size:", value = 1),
-        textInput("pointColor", "Point Color:", value = "coral")
+        textInput("pointColor", "Point Color:", value = "#f88379")
+      ),
+      
+      # Conditional input for line plots
+      conditionalPanel(
+        condition = "input.plotType == 'line'",
+        numericInput("lineWidth", "Line Width:", value = 1, min = 0.1, max = 5, step = 0.1)
       ),
       
       # Conditional input for histograms and density plots
       conditionalPanel(
         condition = "input.plotType == 'histogram' || input.plotType == 'density'",
-        textInput("fillColor", "Fill Color:", value = "coral"),
+        textInput("fillColor", "Fill Color:", value = "#f88379"),
         sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
       
@@ -144,24 +156,28 @@ server <- function(input, output, session) {
                                     y = !!sym(input$selectedVariableY))) +
             geom_point(shape = input$pointStyle, size = input$pointSize, 
                        color = input$pointColor, position = if (input$addJitter) "jitter" else "identity") +
-            ggtitle(input$plotTitle)
+            ggtitle(input$plotTitle) +
+            get(input$plotTheme)()  # Apply selected theme
         } else if (input$plotType == "line") {
           ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
                                     y = !!sym(input$selectedVariableY))) +
-            geom_line(linetype = input$lineStyle, size = input$pointSize, 
+            geom_line(linetype = input$lineStyle, size = input$lineWidth,  # Added linewidth
                       color = input$pointColor) +
-            ggtitle(input$plotTitle)
+            ggtitle(input$plotTitle) +
+            get(input$plotTheme)()  # Apply selected theme
         }
       }
     } else if (input$plotType %in% c("histogram")) {
       ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_histogram(fill = input$fillColor, bins = input$binWidth,
                        alpha = input$alpha) +
-        ggtitle(input$plotTitle)
+        ggtitle(input$plotTitle) +
+        get(input$plotTheme)()  # Apply selected theme
     } else if (input$plotType %in% c("density")) {
       ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
-        ggtitle(input$plotTitle)
+        ggtitle(input$plotTitle) +
+        get(input$plotTheme)()  # Apply selected theme
     }
   })
   
@@ -170,9 +186,11 @@ server <- function(input, output, session) {
     if (!is.null(input$plotType) && input$plotType %in% c("histogram", "density")) {
       updateNumericInput(session, "pointSize", value = NULL, min = NULL, max = NULL, step = NULL)
       updateSelectInput(session, "pointStyle", choices = NULL, selected = NULL)
+      updateNumericInput(session, "lineWidth", value = NULL, min = NULL, max = NULL, step = NULL)
     } else {
       updateNumericInput(session, "pointSize", value = 1, min = 0, max = Inf, step = 0.1)
       updateSelectInput(session, "pointStyle", choices = c("circle", "square", "triangle", "diamond", "cross", "plus", "asterisk"), selected = "circle")
+      updateNumericInput(session, "lineWidth", value = 1, min = 0.1, max = 5, step = 0.1)
     }
   })
   
