@@ -9,7 +9,7 @@ example <- data.frame("N(0,1)" = rnorm(100, 0, 1), "R(0,1)" = runif(100, 0, 1))
 
 # Define UI
 ui <- fluidPage(
-  titlePanel("Interactive Plotting App"),
+  titlePanel("ExcelesqueR"),
   
   sidebarLayout(
     sidebarPanel(
@@ -33,6 +33,42 @@ ui <- fluidPage(
       
       uiOutput("pointStyleInput"),
       
+      # Conditional input for scatter plots and regression lines
+      conditionalPanel(
+        condition = "input.plotType == 'scatter'",
+        checkboxInput("addLinearReg", "Add Linear Regression", value = FALSE),
+        conditionalPanel(
+          condition = "input.addLinearReg",
+          numericInput("regLineWidthLinear", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorLinear", "Regression Line Color:", value = "#3366cc"),
+          selectInput("regLineTypeLinear", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+        ),
+        
+        checkboxInput("addLogisticReg", "Add Logistic Regression", value = FALSE),
+        conditionalPanel(
+          condition = "input.addLogisticReg",
+          numericInput("regLineWidthLogistic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorLogistic", "Regression Line Color:", value = "#3366cc"),
+          selectInput("regLineTypeLogistic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+        ),
+        
+        checkboxInput("addQuadraticReg", "Add Quadratic Regression", value = FALSE),
+        conditionalPanel(
+          condition = "input.addQuadraticReg",
+          numericInput("regLineWidthQuadratic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorQuadratic", "Regression Line Color:", value = "#3366cc"),
+          selectInput("regLineTypeQuadratic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+        ),
+        
+        checkboxInput("addPolyReg", "Add Fractional Polynomial Regression", value = FALSE),
+        conditionalPanel(
+          condition = "input.addPolyReg",
+          numericInput("regLineWidthPoly", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorPoly", "Regression Line Color:", value = "#3366cc"),
+          selectInput("regLineTypePoly", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+        )
+      ),
+      
       # Conditional input for scatter plots
       conditionalPanel(
         condition = "input.plotType == 'scatter'",
@@ -44,7 +80,8 @@ ui <- fluidPage(
       # Conditional input for line plots
       conditionalPanel(
         condition = "input.plotType == 'line'",
-        numericInput("lineWidth", "Line Width:", value = 1, min = 0.1, max = 5, step = 0.1)
+        numericInput("lineWidth", "Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+        textInput("lineColor", "Line Color:", value = "#f88379")
       ),
       
       # Conditional input for histograms and density plots
@@ -149,35 +186,57 @@ server <- function(input, output, session) {
       selected_vars <- data() %>% select(input$selectedVariableX)
     }
     
-    if (input$plotType %in% c("scatter", "line")) {
-      if (input$numVariables == 2) {
-        if (input$plotType == "scatter") {
-          ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
-                                    y = !!sym(input$selectedVariableY))) +
-            geom_point(shape = input$pointStyle, size = input$pointSize, 
-                       color = input$pointColor, position = if (input$addJitter) "jitter" else "identity") +
-            ggtitle(input$plotTitle) +
-            get(input$plotTheme)()  # Apply selected theme
-        } else if (input$plotType == "line") {
-          ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
-                                    y = !!sym(input$selectedVariableY))) +
-            geom_line(linetype = input$lineStyle, size = input$lineWidth,  # Added linewidth
-                      color = input$pointColor) +
-            ggtitle(input$plotTitle) +
-            get(input$plotTheme)()  # Apply selected theme
-        }
+    if (input$plotType %in% c("scatter")) {
+      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+                                        y = !!sym(input$selectedVariableY))) +
+        geom_point(shape = input$pointStyle, size = input$pointSize, 
+                   color = input$pointColor, position = if (input$addJitter) "jitter" else "identity") +
+        ggtitle(input$plotTitle) +
+        get(input$plotTheme)()  # Apply selected theme
+      
+      # Add regression lines based on checkboxes
+      if (input$addLinearReg) {
+        plot <- plot + geom_smooth(method = "lm", se = FALSE, 
+                                   color = input$regLineColorLinear, linetype = input$regLineTypeLinear, size = input$regLineWidthLinear)
       }
-    } else if (input$plotType %in% c("histogram")) {
-      ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
+      if (input$addLogisticReg) {
+        plot <- plot + geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE, 
+                                   color = input$regLineColorLogistic, linetype = input$regLineTypeLogistic, size = input$regLineWidthLogistic)
+      }
+      if (input$addQuadraticReg) {
+        plot <- plot + geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, 
+                                   color = input$regLineColorQuadratic, linetype = input$regLineTypeQuadratic, size = input$regLineWidthQuadratic)
+      }
+      if (input$addPolyReg) {
+        plot <- plot + geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE, 
+                                   color = input$regLineColorPoly, linetype = input$regLineTypePoly, size = input$regLineWidthPoly)
+      }
+      
+      print(plot)
+    }
+    else if (input$plotType %in% c("line")) {
+      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+                                        y = !!sym(input$selectedVariableY))) +
+        geom_line(linetype = input$lineStyle, size = input$lineWidth,  # Added linewidth
+                  color = input$lineColor) +
+        ggtitle(input$plotTitle) +
+        get(input$plotTheme)()  # Apply selected theme
+      print(plot)
+    }
+    else if (input$plotType %in% c("histogram")) {
+      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_histogram(fill = input$fillColor, bins = input$binWidth,
                        alpha = input$alpha) +
         ggtitle(input$plotTitle) +
         get(input$plotTheme)()  # Apply selected theme
-    } else if (input$plotType %in% c("density")) {
-      ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
+      print(plot)
+    }
+    else if (input$plotType %in% c("density")) {
+      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
         ggtitle(input$plotTitle) +
         get(input$plotTheme)()  # Apply selected theme
+      print(plot)
     }
   })
   
