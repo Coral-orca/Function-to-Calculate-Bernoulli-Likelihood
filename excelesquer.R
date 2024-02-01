@@ -235,6 +235,9 @@ server <- function(input, output, session) {
       plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
         ggtitle(input$plotTitle) +
+        geom_vline(aes(xintercept = mean(input$selectedVariableX), color = "Mean"), linetype = "solid", size = 1) +
+        geom_vline(aes(xintercept = median(input$selectedVariableX), color = "Median"), linetype = "dotted", size = 1) +
+        scale_color_manual(values = c("Mean" = "black", "Median" = "darkgrey")) +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
