@@ -40,7 +40,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addLinearReg",
           numericInput("regLineWidthLinear", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorLinear", "Regression Line Color:", value = "#3366cc"),
+          textInput("regLineColorLinear", "Regression Line Color:", value = "#f88379"),
           selectInput("regLineTypeLinear", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         ),
         
@@ -48,7 +48,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addLogisticReg",
           numericInput("regLineWidthLogistic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorLogistic", "Regression Line Color:", value = "#3366cc"),
+          textInput("regLineColorLogistic", "Regression Line Color:", value = "#f88379"),
           selectInput("regLineTypeLogistic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         ),
         
@@ -56,7 +56,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addQuadraticReg",
           numericInput("regLineWidthQuadratic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorQuadratic", "Regression Line Color:", value = "#3366cc"),
+          textInput("regLineColorQuadratic", "Regression Line Color:", value = "#f88379"),
           selectInput("regLineTypeQuadratic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         ),
         
@@ -64,7 +64,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addPolyReg",
           numericInput("regLineWidthPoly", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorPoly", "Regression Line Color:", value = "#3366cc"),
+          textInput("regLineColorPoly", "Regression Line Color:", value = "#f88379"),
           selectInput("regLineTypePoly", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         )
       ),
@@ -242,6 +242,8 @@ server <- function(input, output, session) {
         geom_density(fill = input$fillColor, alpha = input$alpha) +
         ggtitle(input$plotTitle) +
         geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "black", linetype = "dotted", size = 0.7) +
+        annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
+                 label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
