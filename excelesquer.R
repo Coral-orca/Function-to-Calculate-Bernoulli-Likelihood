@@ -191,6 +191,12 @@ server <- function(input, output, session) {
                                         y = !!sym(input$selectedVariableY))) +
         geom_point(shape = input$pointStyle, size = input$pointSize, 
                    color = input$pointColor, position = if (input$addJitter) "jitter" else "identity") +
+        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "black", linetype = "dotted", size = 0.7) +
+        geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "black", linetype = "dotted", size = 0.7) +
+        annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = min(selected_vars[[input$selectedVariableY]]), 
+                 label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
+        annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
+                 label = paste(round(mean(selected_vars[[input$selectedVariableY]]), 3)), vjust = 1.5, hjust = -0.5) +
         ggtitle(input$plotTitle) +
         get(input$plotTheme)()  # Apply selected theme
       
@@ -235,9 +241,7 @@ server <- function(input, output, session) {
       plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
         ggtitle(input$plotTitle) +
-        geom_vline(aes(xintercept = mean(input$selectedVariableX), color = "Mean"), linetype = "solid", size = 1) +
-        geom_vline(aes(xintercept = median(input$selectedVariableX), color = "Median"), linetype = "dotted", size = 1) +
-        scale_color_manual(values = c("Mean" = "black", "Median" = "darkgrey")) +
+        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "black", linetype = "dotted", size = 0.7) +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
