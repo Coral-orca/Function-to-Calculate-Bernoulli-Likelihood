@@ -10,7 +10,12 @@ library(ggplot2)
 # `nacol` - colour of the countries with NA values; default = "lightgrey"
 
 # Define the function along with the default values of the arguments
-worldplot <- function(countryname = c("Australia", "Canada", "Ecuador", "Egypt", "Mexico",  "India", "Russia",  "Senegal", "UK"),countryvalue = c(1, 2, 3, 4, 5, 6, 7, 8, 9), leglab = "Gradient", colgrad = c("lightgreen", "darkgreen"), bdcol = "darkgrey", nacol = "lightgrey"){
+worldplot <- function(countryname = c("Australia", "Canada", "Ecuador", "Egypt", "Mexico",  "India", "Russia",  "Senegal", "UK"), 
+                      countryvalue = c(1, 2, 3, 4, 5, 6, 7, 8, 9), 
+                      leglab = "Gradient", 
+                      colgrad = c("lightgreen", "darkgreen"), 
+                      bdcol = "darkgrey", 
+                      nacol = "lightgrey"){
   
   data <- data.frame(        # Create a data frame
     country = countryname,   # Variable `country` containing the user input country names
