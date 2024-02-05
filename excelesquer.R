@@ -5,7 +5,15 @@ library(ggplot2)
 library(haven)
 
 # Example data for default plotting
-example <- data.frame("N(0,1)" = rnorm(100, 0, 1), "R(0,1)" = runif(100, 0, 1), "N(1,2)" = rnorm(100, 1, 2), "R(1,2)" = runif(100, 1, 2))
+example <- data.frame("N(0,1)" = rnorm(100, 0, 1), 
+                      "N(1,2)" = rnorm(100, 1, 2), 
+                      "N(10,5)" = rnorm(100, 10, 5), 
+                      "N(-10,5)" = rnorm(100, -10, 5), 
+                      "R(0,1)" = runif(100, 0, 1), 
+                      "R(1,2)" = runif(100, 1, 2), 
+                      "R(0,10)" = runif(100, 0, 10), 
+                      "R(-10,0)" = runif(100, -10, 0)
+                      )
 
 # Define UI
 ui <- fluidPage(
