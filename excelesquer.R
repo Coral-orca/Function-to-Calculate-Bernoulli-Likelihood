@@ -15,6 +15,8 @@ example <- data.frame("N(0,1)" = rnorm(100, 0, 1),
                       "R(-10,0)" = runif(100, -10, 0)
                       )
 
+colnames(example) <- c("N(0, 1)", "N(1, 2)", "N(10,5)", "N(-10,5)", "R(0,1)", "R(1,2)", "R(0,10)", "R(-10,0)")
+
 # Define UI
 ui <- fluidPage(
   titlePanel("ExcelesqueR"),
@@ -199,8 +201,8 @@ server <- function(input, output, session) {
                                         y = !!sym(input$selectedVariableY))) +
         geom_point(shape = input$pointStyle, size = input$pointSize, 
                    color = input$pointColor, position = if (input$addJitter) "jitter" else "identity") +
-        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "black", linetype = "dotted", size = 0.7) +
-        geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "black", linetype = "dotted", size = 0.7) +
+        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
+        geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "#000000", linetype = "dotted", size = 0.7) +
         annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = min(selected_vars[[input$selectedVariableY]]), 
                  label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
         annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
@@ -249,7 +251,7 @@ server <- function(input, output, session) {
       plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
         ggtitle(input$plotTitle) +
-        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "black", linetype = "dotted", size = 0.7) +
+        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
         annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
                  label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
         get(input$plotTheme)()  # Apply selected theme
