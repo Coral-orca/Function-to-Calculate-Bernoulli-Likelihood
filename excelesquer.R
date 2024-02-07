@@ -1,11 +1,17 @@
-# Load required libraries
-library(shiny)
-library(dplyr)
-library(ggplot2)
-library(haven)
+library_names <- c("ggplot2", "shiny", "dplyr", "haven")
+
+# Check, install, and load libraries
+for (library_name in library_names) {
+  # Check if library is available, install and load if not
+  if (!require(library_name, character.only = TRUE)) {
+    install.packages(library_name)
+    library(library_name, character.only = TRUE)
+  }
+}
 
 # Example data for default plotting
-example <- data.frame("N(0,1)" = rnorm(100, 0, 1), 
+example <- data.frame("B(10, 0.5)" = rbinom(10, 100, 0.5),
+                      "N(0,1)" = rnorm(100, 0, 1), 
                       "N(1,2)" = rnorm(100, 1, 2), 
                       "N(10,5)" = rnorm(100, 10, 5), 
                       "N(-10,5)" = rnorm(100, -10, 5), 
@@ -13,9 +19,9 @@ example <- data.frame("N(0,1)" = rnorm(100, 0, 1),
                       "R(1,2)" = runif(100, 1, 2), 
                       "R(0,10)" = runif(100, 0, 10), 
                       "R(-10,0)" = runif(100, -10, 0)
-                      )
+)
 
-colnames(example) <- c("N(0, 1)", "N(1, 2)", "N(10,5)", "N(-10,5)", "R(0,1)", "R(1,2)", "R(0,10)", "R(-10,0)")
+colnames(example) <- c("B(10, 0.5)", "N(0, 1)", "N(1, 2)", "N(10,5)", "N(-10,5)", "R(0,1)", "R(1,2)", "R(0,10)", "R(-10,0)")
 
 # Define UI
 ui <- fluidPage(
@@ -28,7 +34,7 @@ ui <- fluidPage(
       
       # Input: Number of variables to plot
       sliderInput("numVariables", "Number of Variables to Plot", 
-                  min = 1, max = 2, value = 1, step = 1, 
+                  min = 1, max = 2, value = 1, step = 0.01, 
                   ticks = FALSE), 
       
       # Dynamic UI elements
@@ -96,19 +102,42 @@ ui <- fluidPage(
       
       # Conditional input for histograms and density plots
       conditionalPanel(
-        condition = "input.plotType == 'histogram' || input.plotType == 'density'",
+        condition = "input.plotType == 'histogram' & input.plotType == 'density'",
         textInput("fillColor", "Fill Color:", value = "#f88379"),
         sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
-      
-      # Input: Plot title
-      textInput("plotTitle", "Plot Title:", value = "Plot Title"),
       
       # Conditional input for histograms
       conditionalPanel(
         condition = "input.plotType == 'histogram'",
         sliderInput("binWidth", "Bin Width", min = 1, max = 30, value = 15, step = 1)
       ),
+      
+      # Conditional input for box plots
+      conditionalPanel(
+        condition = "input.plotType == 'boxplot' & input.numVariables == '1'",
+        textInput("boxFillColor", "Box Fill Color:", value = "#f88379"),
+        textInput("boxColor", "Box Color:", value = "#000000"),
+        textInput("boxOutlierColor", "Outlier Color:", value = "#f88379"),
+      ),
+      
+      # Conditional input for box plots
+      conditionalPanel(
+        condition = "input.plotType == 'boxplot' & input.numVariables == '2'",
+        textInput("vioFillCol", "Select Violin Colour", value = "#f88379"),
+        textInput("boxColor2", "Box Color:", value = "#ffffff"),
+        sliderInput("boxWidth2", "Box Width:", min = 0.1, max = 1, value = 0.1, step = 0.1),
+        sliderInput("vioWidth", "Violin Width:", min = 0.1, max = 2, value = 1, step = 0.1)
+      ),
+      
+      # Input: Axes labels
+      # X-axis
+      textInput("xTitle", "X-axis Label:", value = "X-axis Label"),
+      # Y-axis
+      textInput("yTitle", "Y-axis Label:", value = "Y-axis Label"),
+      
+      # Input: Plot title
+      textInput("plotTitle", "Plot Title:", value = "Plot Title"),
       
       # Input: Download button
       downloadButton("downloadPlot", "Download Plot")
@@ -165,9 +194,9 @@ server <- function(input, output, session) {
   # Dynamic UI element: Select plot type
   output$plotTypeInput <- renderUI({
     if (input$numVariables == 2) {
-      selectInput("plotType", "Select Plot Type", choices = c("scatter", "line"))
+      selectInput("plotType", "Select Plot Type", choices = c("scatter", "line", "boxplot"))
     } else {
-      selectInput("plotType", "Select Plot Type", choices = c("histogram", "density"))
+      selectInput("plotType", "Select Plot Type", choices = c("histogram", "density", "boxplot"))
     }
   })
   
@@ -207,7 +236,7 @@ server <- function(input, output, session) {
                  label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
         annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
                  label = paste(round(mean(selected_vars[[input$selectedVariableY]]), 3)), vjust = 1.5, hjust = -0.5) +
-        ggtitle(input$plotTitle) +
+        labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
         get(input$plotTheme)()  # Apply selected theme
       
       # Add regression lines based on checkboxes
@@ -227,7 +256,6 @@ server <- function(input, output, session) {
         plot <- plot + geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE, 
                                    color = input$regLineColorPoly, linetype = input$regLineTypePoly, size = input$regLineWidthPoly)
       }
-      
       print(plot)
     }
     else if (input$plotType %in% c("line")) {
@@ -235,7 +263,7 @@ server <- function(input, output, session) {
                                         y = !!sym(input$selectedVariableY))) +
         geom_line(linetype = input$lineStyle, size = input$lineWidth,  # Added linewidth
                   color = input$lineColor) +
-        ggtitle(input$plotTitle) +
+        labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
@@ -243,25 +271,41 @@ server <- function(input, output, session) {
       plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_histogram(fill = input$fillColor, bins = input$binWidth,
                        alpha = input$alpha) +
-        ggtitle(input$plotTitle) +
+        labs(title = input$plotTitle, x = input$xTitle, y = "Frequency") +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
     else if (input$plotType %in% c("density")) {
       plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
-        ggtitle(input$plotTitle) +
+        labs(title = input$plotTitle, x = input$xTitle, y = "Density") +
         geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
         annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
                  label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
+    else if (input$plotType %in% c("boxplot")) {
+      if (input$numVariables == 1) {
+        plot <- ggplot(selected_vars, aes(y = !!sym(input$selectedVariableX))) +
+          geom_boxplot(fill = input$boxFillColor, color = input$boxColor, outlier.color = input$boxOutlierColor, width = 0.5) +
+          labs(title = input$plotTitle, y = input$yTitle) +
+          get(input$plotTheme)()  # Apply selected theme
+        print(plot)
+      } else if (input$numVariables == 2) {
+        plot <- ggplot(selected_vars, aes(x = as.factor(!!sym(input$selectedVariableX)), y = !!sym(input$selectedVariableY))) +
+          geom_violin(fill = input$vioFillCol, color = input$boxColor2, width = input$vioWidth) +
+          geom_boxplot(fill = input$vioFillCol, color = input$boxColor2, outlier.color = input$boxOutlierColor, width = input$boxWidth2) +
+          labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
+          get(input$plotTheme)()  # Apply selected theme
+        print(plot)
+      }
+    }
   })
   
   # Observer: Change input options based on plot type
   observe({
-    if (!is.null(input$plotType) && input$plotType %in% c("histogram", "density")) {
+    if (!is.null(input$plotType) && input$plotType %in% c("histogram", "density", "boxplot")) {
       updateNumericInput(session, "pointSize", value = NULL, min = NULL, max = NULL, step = NULL)
       updateSelectInput(session, "pointStyle", choices = NULL, selected = NULL)
       updateNumericInput(session, "lineWidth", value = NULL, min = NULL, max = NULL, step = NULL)
@@ -269,6 +313,14 @@ server <- function(input, output, session) {
       updateNumericInput(session, "pointSize", value = 1, min = 0, max = Inf, step = 0.1)
       updateSelectInput(session, "pointStyle", choices = c("circle", "square", "triangle", "diamond", "cross", "plus", "asterisk"), selected = "circle")
       updateNumericInput(session, "lineWidth", value = 1, min = 0.1, max = 5, step = 0.1)
+    }
+  })
+  
+  observe({
+    # Check if the slider is left in the middle
+    if(input$numVariables %% 1 != 0) {
+      # If left in the middle, round it to the nearest whole number
+      updateSliderInput(session, "numVariables", value = round(input$numVariables))
     }
   })
   
