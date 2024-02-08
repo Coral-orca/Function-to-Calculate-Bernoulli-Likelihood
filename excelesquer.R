@@ -117,7 +117,7 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "input.plotType == 'boxplot' & input.numVariables == '1'",
         textInput("boxFillColor", "Box Fill Color:", value = "#f88379"),
-        textInput("boxColor", "Box Color:", value = "#000000"),
+        textInput("boxColor", "Outline Color:", value = "#000000"),
         textInput("boxOutlierColor", "Outlier Color:", value = "#f88379"),
       ),
       
@@ -125,7 +125,7 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "input.plotType == 'boxplot' & input.numVariables == '2'",
         textInput("vioFillCol", "Select Violin Colour", value = "#f88379"),
-        textInput("boxColor2", "Box Color:", value = "#ffffff"),
+        textInput("boxColor2", "Outline Color:", value = "#ffffff"),
         sliderInput("boxWidth2", "Box Width:", min = 0.1, max = 1, value = 0.1, step = 0.1),
         sliderInput("vioWidth", "Violin Width:", min = 0.1, max = 2, value = 1, step = 0.1)
       ),
