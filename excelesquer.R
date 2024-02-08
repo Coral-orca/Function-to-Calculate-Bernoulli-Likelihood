@@ -21,7 +21,15 @@ example <- data.frame("B(10, 0.5)" = rbinom(10, 100, 0.5),
                       "R(-10,0)" = runif(100, -10, 0)
 )
 
-colnames(example) <- c("B(10, 0.5)", "N(0, 1)", "N(1, 2)", "N(10,5)", "N(-10,5)", "R(0,1)", "R(1,2)", "R(0,10)", "R(-10,0)")
+colnames(example) <- c("B(10, 0.5)", 
+                       "N(0, 1)", 
+                       "N(1, 2)", 
+                       "N(10,5)", 
+                       "N(-10,5)", 
+                       "R(0,1)", 
+                       "R(1,2)", 
+                       "R(0,10)", 
+                       "R(-10,0)")
 
 # Define UI
 ui <- fluidPage(
@@ -241,21 +249,42 @@ server <- function(input, output, session) {
       
       # Add regression lines based on checkboxes
       if (input$addLinearReg) {
-        plot <- plot + geom_smooth(method = "lm", se = FALSE, 
-                                   color = input$regLineColorLinear, linetype = input$regLineTypeLinear, size = input$regLineWidthLinear)
+        plot <- plot + geom_smooth(method = "lm", 
+                                   se = FALSE, 
+                                   aes(color = "Linear"), 
+                                   linetype = input$regLineTypeLinear, 
+                                   size = input$regLineWidthLinear)
       }
       if (input$addLogisticReg) {
-        plot <- plot + geom_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE, 
-                                   color = input$regLineColorLogistic, linetype = input$regLineTypeLogistic, size = input$regLineWidthLogistic)
+        plot <- plot + geom_smooth(method = "glm", 
+                                   method.args = list(family = "binomial"), 
+                                   se = FALSE, 
+                                   aes(color = "Logistic"), 
+                                   linetype = input$regLineTypeLogistic, 
+                                   size = input$regLineWidthLogistic)
       }
       if (input$addQuadraticReg) {
-        plot <- plot + geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, 
-                                   color = input$regLineColorQuadratic, linetype = input$regLineTypeQuadratic, size = input$regLineWidthQuadratic)
+        plot <- plot + geom_smooth(method = "lm", 
+                                   formula = y ~ poly(x, 2), 
+                                   se = FALSE, 
+                                   aes(color = "Quadratic"), 
+                                   linetype = input$regLineTypeQuadratic, 
+                                   size = input$regLineWidthQuadratic)
       }
       if (input$addPolyReg) {
-        plot <- plot + geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE, 
-                                   color = input$regLineColorPoly, linetype = input$regLineTypePoly, size = input$regLineWidthPoly)
+        plot <- plot + geom_smooth(method = "lm", 
+                                   formula = y ~ poly(x, 3), 
+                                   se = FALSE, 
+                                   aes(color = "Fractional Polynomial"), 
+                                   linetype = input$regLineTypePoly, 
+                                   size = input$regLineWidthPoly)
       }
+      # Add a legend
+      plot <- plot + scale_color_manual(values = c("Linear" = input$regLineColorLinear,
+                                                   "Logistic" = input$regLineColorLogistic,
+                                                   "Quadratic" = input$regLineColorQuadratic,
+                                                   "Fractional Polynomial" = input$regLineColorPoly),
+                                        name = "Regression Line")
       print(plot)
     }
     else if (input$plotType %in% c("line")) {
