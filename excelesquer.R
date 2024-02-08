@@ -220,9 +220,9 @@ server <- function(input, output, session) {
     req(data())
     
     if (input$numVariables == 2) {
-      selected_vars <- data() %>% select(input$selectedVariableX, input$selectedVariableY)
+      selected_vars <- data() %>% dplyr::select(input$selectedVariableX, input$selectedVariableY)
     } else {
-      selected_vars <- data() %>% select(input$selectedVariableX)
+      selected_vars <- data() %>% dplyr::select(input$selectedVariableX)
     }
     
     if (input$plotType %in% c("scatter")) {
