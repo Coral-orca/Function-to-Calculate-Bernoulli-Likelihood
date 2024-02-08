@@ -102,7 +102,7 @@ ui <- fluidPage(
       
       # Conditional input for histograms and density plots
       conditionalPanel(
-        condition = "input.plotType == 'histogram' & input.plotType == 'density'",
+        condition = "input.plotType == 'histogram' || input.plotType == 'density'",
         textInput("fillColor", "Fill Color:", value = "#f88379"),
         sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
