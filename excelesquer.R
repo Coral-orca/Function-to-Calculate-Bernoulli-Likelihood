@@ -1,13 +1,7 @@
-library_names <- c("ggplot2", "shiny", "dplyr", "haven")
-
-# Check, install, and load libraries
-for (library_name in library_names) {
-  # Check if library is available, install and load if not
-  if (!require(library_name, character.only = TRUE)) {
-    install.packages(library_name)
-    library(library_name, character.only = TRUE)
-  }
-}
+library(shiny)
+library(dplyr)
+library(haven)
+library(ggplot2)
 
 # Example data for default plotting
 example <- data.frame("B(10, 0.5)" = rbinom(10, 100, 0.5),
@@ -64,7 +58,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addLinearReg",
           numericInput("regLineWidthLinear", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorLinear", "Regression Line Color:", value = "#f88379"),
+          textInput("regLineColorLinear", "Regression Line Color:", value = "#ff0000"),
           selectInput("regLineTypeLinear", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         ),
         
@@ -72,7 +66,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addLogisticReg",
           numericInput("regLineWidthLogistic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorLogistic", "Regression Line Color:", value = "#f88379"),
+          textInput("regLineColorLogistic", "Regression Line Color:", value = "#fff000"),
           selectInput("regLineTypeLogistic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         ),
         
@@ -80,7 +74,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addQuadraticReg",
           numericInput("regLineWidthQuadratic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorQuadratic", "Regression Line Color:", value = "#f88379"),
+          textInput("regLineColorQuadratic", "Regression Line Color:", value = "#00ff00"),
           selectInput("regLineTypeQuadratic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         ),
         
@@ -88,7 +82,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.addPolyReg",
           numericInput("regLineWidthPoly", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorPoly", "Regression Line Color:", value = "#f88379"),
+          textInput("regLineColorPoly", "Regression Line Color:", value = "#0000ff"),
           selectInput("regLineTypePoly", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
         )
       ),
@@ -324,7 +318,7 @@ server <- function(input, output, session) {
       } else if (input$numVariables == 2) {
         plot <- ggplot(selected_vars, aes(x = as.factor(!!sym(input$selectedVariableX)), y = !!sym(input$selectedVariableY))) +
           geom_violin(fill = input$vioFillCol, color = input$boxColor2, width = input$vioWidth) +
-          geom_boxplot(fill = input$vioFillCol, color = input$boxColor2, outlier.color = input$boxOutlierColor, width = input$boxWidth2) +
+          geom_boxplot(fill = input$vioFillCol, color = input$boxColor2, outlier.color = input$boxColor2, width = input$boxWidth2) +
           labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
           get(input$plotTheme)()  # Apply selected theme
         print(plot)
