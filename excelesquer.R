@@ -122,7 +122,8 @@ ui <- fluidPage(
       # Conditional input for scatter plots
       conditionalPanel(
         condition = "input.plotType == 'scatter' & input.numVariables == '2'",
-        checkboxInput("addJitter2", "Add Jitter?", value = FALSE),
+        checkboxInput("addMeans2", "Add Mean Lines", value = TRUE),
+        checkboxInput("addJitter2", "Add Jitter", value = FALSE),
         sliderInput("pointSize2", "Point Size:", value = 3, min = 0.1, max = 10, step = 0.1, ticks = TRUE),
         textInput("pointColor2", "Point Colour:", value = "#f88379")
       ),
@@ -130,7 +131,7 @@ ui <- fluidPage(
       # Conditional input for scatter plots
       conditionalPanel(
         condition = "input.plotType == 'scatter' & input.numVariables == '3'",
-        checkboxInput("addJitter3", "Add Jitter?", value = FALSE),
+        checkboxInput("addJitter3", "Add Jitter", value = FALSE),
         textInput("gradTitle3", "Gradient Label:", value = "Gradient"),
         sliderInput("pointSize3", "Point Size:", value = 3, min = 0.1, max = 10, step = 0.1, ticks = TRUE),
         textInput("gradLow3", "Gradient Low:", value = "#abcdef"),
@@ -140,7 +141,7 @@ ui <- fluidPage(
       # Conditional input for scatter plots
       conditionalPanel(
         condition = "input.plotType == 'scatter' & input.numVariables == '4'",
-        checkboxInput("addJitter4", "Add Jitter?", value = FALSE),
+        checkboxInput("addJitter4", "Add Jitter", value = FALSE),
         textInput("gradTitle4", "Gradient Label:", value = "Gradient"),
         textInput("sizeTitle4", "Size Label:", value = "Size"),
         textInput("gradLow4", "Gradient Low:", value = "#abcdef"),
@@ -157,6 +158,7 @@ ui <- fluidPage(
       # Conditional input for histograms and density plots
       conditionalPanel(
         condition = "input.plotType == 'histogram' | input.plotType == 'density'",
+        checkboxInput("addMeans", "Add Mean Line", value = TRUE),
         textInput("fillColor", "Fill Colour:", value = "#f88379"),
         sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
@@ -193,17 +195,13 @@ ui <- fluidPage(
         textInput("yTitle", "Y-axis Label:", value = "Y-axis Label")
         ),
       
-      
       # Input: Plot title
       textInput("plotTitle", "Plot Title:", value = "Plot Title"),
-      
-      # Input: Download button
-      downloadButton("downloadPlot", "Download Plot")
     ),
     
     # Output: Main panel for displaying the plot
     mainPanel(
-      plotOutput("plot")
+      plotOutput("plt")
     )
   )
 )
@@ -229,19 +227,19 @@ server <- function(input, output, session) {
   output$variableSelectionX <- renderUI({
     variables <- names(data())
     if (input$numVariables == 4) {
-      selectInput("selectedVariableX", "Select Variable for X-axis", 
+      selectInput("selectedVariableX", "Select X-axis Variable:", 
                   choices = variables, 
                   selected = variables[1])
     } else if (input$numVariables == 3) {
-      selectInput("selectedVariableX", "Select Variable for X-axis", 
+      selectInput("selectedVariableX", "Select X-axis Variable:", 
                   choices = variables, 
                   selected = variables[1])
     } else if (input$numVariables == 2) {
-      selectInput("selectedVariableX", "Select Variable for X-axis", 
+      selectInput("selectedVariableX", "Select X-axis Variable:", 
                   choices = variables, 
                   selected = variables[1])
     } else {
-      selectInput("selectedVariableX", "Select Variable", 
+      selectInput("selectedVariableX", "Select Variable:", 
                   choices = variables, 
                   selected = variables[1])
     }
@@ -251,17 +249,17 @@ server <- function(input, output, session) {
   output$variableSelectionY <- renderUI({
     if (input$numVariables == 4) {
       variables <- names(data())
-      selectInput("selectedVariableY", "Select Variable for Y-axis", 
+      selectInput("selectedVariableY", "Select Y-axis Variable:", 
                   choices = variables, 
                   selected = variables[2])
     }else if (input$numVariables == 3) {
       variables <- names(data())
-      selectInput("selectedVariableY", "Select Variable for Y-axis", 
+      selectInput("selectedVariableY", "Select Y-axis Variable:", 
                   choices = variables, 
                   selected = variables[2])
     } else if (input$numVariables == 2){
       variables <- names(data())
-      selectInput("selectedVariableY", "Select Variable for Y-axis", 
+      selectInput("selectedVariableY", "Select Y-axis Variable:", 
                   choices = variables, 
                   selected = variables[2])
     }
@@ -270,12 +268,12 @@ server <- function(input, output, session) {
   output$variableSelectionZ <- renderUI({
     if (input$numVariables == 4) {
       variables <- names(data())
-      selectInput("selectedVariableZ", "Select Gradient Variable", 
+      selectInput("selectedVariableZ", "Select Gradient Variable:", 
                   choices = variables, 
                   selected = variables[3])
     } else if (input$numVariables == 3) {
       variables <- names(data())
-      selectInput("selectedVariableZ", "Select Gradient Variable", 
+      selectInput("selectedVariableZ", "Select Gradient Variable:", 
                   choices = variables, 
                   selected = variables[3])
     }
@@ -284,7 +282,7 @@ server <- function(input, output, session) {
   output$variableSelectionW <- renderUI({
     if (input$numVariables == 4) {
       variables <- names(data())
-      selectInput("selectedVariableW", "Select Size Variable", 
+      selectInput("selectedVariableW", "Select Size Variable:", 
                   choices = variables, 
                   selected = variables[4])
     }
@@ -317,7 +315,7 @@ server <- function(input, output, session) {
   })
   
   # Output: Render the plot based on user inputs
-  output$plot <- renderPlot({
+  output$plt <- renderPlot({
     req(data())
     if (input$numVariables == 4) {
       selected_vars <- data() %>% dplyr::select(input$selectedVariableX, input$selectedVariableY, input$selectedVariableZ, input$selectedVariableW)
@@ -331,29 +329,35 @@ server <- function(input, output, session) {
     
     if (input$plotType %in% c("scatter")) {
       if (input$numVariables == 2) {
-      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+      plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
                                         y = !!sym(input$selectedVariableY))) +
         geom_point(shape = input$pointStyle, size = input$pointSize2, 
                    color = input$pointColor2, position = if (input$addJitter2) "jitter" else "identity") +
-        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
-        geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "#000000", linetype = "dotted", size = 0.7) +
-        annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = min(selected_vars[[input$selectedVariableY]]), 
-                 label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), vjust = 1.5, hjust = -0.05, angle = 90) +
-        annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
-                 label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableY]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableY]])), 3), ")"), vjust = 1.5, hjust = -0.05) +
         labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
         get(input$plotTheme)()  # Apply selected theme
+      
+      # Add mean lines based on checkbox
+      if (input$addMeans2) {
+        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
+          geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "#000000", linetype = "dotted", size = 0.7) +
+          annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = min(selected_vars[[input$selectedVariableY]]), 
+                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), 
+                   vjust = 1.5, hjust = -0.05, angle = 90) +
+          annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
+                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableY]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableY]])), 3), ")"), 
+                   vjust = 1.5, hjust = -0.05)
+      }
 
       # Add regression lines based on checkboxes
       if (input$addLinearReg) {
-        plot <- plot + geom_smooth(method = "lm", 
+        plt <- plt + geom_smooth(method = "lm", 
                                    se = FALSE, 
                                    aes(color = "Linear"), 
                                    linetype = input$regLineTypeLinear, 
                                    size = input$regLineWidthLinear)
       }
       if (input$addLogisticReg) {
-        plot <- plot + geom_smooth(method = "glm", 
+        plt <- plt + geom_smooth(method = "glm", 
                                    method.args = list(family = "binomial"), 
                                    se = FALSE, 
                                    aes(color = "Logistic"), 
@@ -361,7 +365,7 @@ server <- function(input, output, session) {
                                    size = input$regLineWidthLogistic)
       }
       if (input$addQuadraticReg) {
-        plot <- plot + geom_smooth(method = "lm", 
+        plt <- plt + geom_smooth(method = "lm", 
                                    formula = y ~ poly(x, 2), 
                                    se = FALSE, 
                                    aes(color = "Quadratic"), 
@@ -369,7 +373,7 @@ server <- function(input, output, session) {
                                    size = input$regLineWidthQuadratic)
       }
       if (input$addPolyReg) {
-        plot <- plot + geom_smooth(method = "lm", 
+        plt <- plt + geom_smooth(method = "lm", 
                                    formula = y ~ poly(x, 3), 
                                    se = FALSE, 
                                    aes(color = "Fractional Polynomial"), 
@@ -377,13 +381,13 @@ server <- function(input, output, session) {
                                    size = input$regLineWidthPoly)
       }
       # Add a legend
-      plot <- plot + scale_color_manual(values = c("Linear" = input$regLineColorLinear,
+      plt <- plt + scale_color_manual(values = c("Linear" = input$regLineColorLinear,
                                                    "Logistic" = input$regLineColorLogistic,
                                                    "Quadratic" = input$regLineColorQuadratic,
                                                    "Fractional Polynomial" = input$regLineColorPoly),
                                         name = "Regression Line")
       } else if (input$numVariables == 3) {
-        plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+        plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
                                           y = !!sym(input$selectedVariableY),
                                           color = !!sym(input$selectedVariableZ))) +
           geom_point(shape = input$pointStyle, size = input$pointSize3, 
@@ -391,9 +395,9 @@ server <- function(input, output, session) {
           labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle, color = input$gradTitle3) +
           get(input$plotTheme)()  # Apply selected theme
         
-        plot <- plot  + scale_color_gradient(low = input$gradLow3, high = input$gradHigh3)
+        plt <- plt  + scale_color_gradient(low = input$gradLow3, high = input$gradHigh3)
       } else if (input$numVariables == 4) {
-        plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+        plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
                                           y = !!sym(input$selectedVariableY),
                                           color = !!sym(input$selectedVariableZ), size = !!sym(input$selectedVariableW))) +
           geom_point(shape = input$pointStyle, 
@@ -401,52 +405,65 @@ server <- function(input, output, session) {
           labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle, color = input$gradTitle4, size = input$sizeTitle4) +
           get(input$plotTheme)()  # Apply selected theme
         
-        plot <- plot  + scale_color_gradient(low = input$gradLow4, high = input$gradHigh4) +
+        plt <- plt  + scale_color_gradient(low = input$gradLow4, high = input$gradHigh4) +
           scale_size_continuous()
       }
-      print(plot)
+      print(plt)
     }
     else if (input$plotType %in% c("line")) {
-      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+      plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
                                         y = !!sym(input$selectedVariableY))) +
         geom_line(linetype = input$lineStyle, size = input$lineWidth,  # Added linewidth
                   color = input$lineColor) +
         labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
         get(input$plotTheme)()  # Apply selected theme
-      print(plot)
+      print(plt)
     }
     else if (input$plotType %in% c("histogram")) {
-      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
+      plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_histogram(fill = input$fillColor, bins = input$binWidth,
                        alpha = input$alpha) +
         labs(title = input$plotTitle, x = input$xTitle, y = "Frequency") +
         get(input$plotTheme)()  # Apply selected theme
-      print(plot)
+      
+      # Add mean line based on checkbox
+      if (input$addMeans) {
+        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
+          annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
+                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), 
+                   vjust = 1.5, hjust = -0.05, angle = 90)
+      }
+      print(plt)
     }
     else if (input$plotType %in% c("density")) {
-      plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
+      plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
         geom_density(fill = input$fillColor, alpha = input$alpha) +
         labs(title = input$plotTitle, x = input$xTitle, y = "Density") +
-        geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
-        annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
-                 label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), vjust = 1.5, hjust = -0.05, angle = 90) +
         get(input$plotTheme)()  # Apply selected theme
-      print(plot)
+      
+      # Add mean line based on checkbox
+      if (input$addMeans) {
+        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
+          annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
+                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), 
+                   vjust = 1.5, hjust = -0.05, angle = 90)
+      }
+      print(plt)
     }
     else if (input$plotType %in% c("boxplot")) {
       if (input$numVariables == 1) {
-        plot <- ggplot(selected_vars, aes(y = !!sym(input$selectedVariableX))) +
+        plt <- ggplot(selected_vars, aes(y = !!sym(input$selectedVariableX))) +
           geom_boxplot(fill = input$boxFillColor, color = input$boxColor, outlier.color = input$boxOutlierColor, width = 0.5) +
           labs(title = input$plotTitle, y = input$yTitle) +
           get(input$plotTheme)()  # Apply selected theme
-        print(plot)
+        print(plt)
       } else if (input$numVariables == 2) {
-        plot <- ggplot(selected_vars, aes(x = as.factor(!!sym(input$selectedVariableX)), y = !!sym(input$selectedVariableY))) +
+        plt <- ggplot(selected_vars, aes(x = as.factor(!!sym(input$selectedVariableX)), y = !!sym(input$selectedVariableY))) +
           geom_violin(fill = input$vioFillCol, color = input$boxColor2, width = input$vioWidth) +
           geom_boxplot(fill = input$vioFillCol, color = input$boxColor2, outlier.color = input$boxColor2, width = input$boxWidth2) +
           labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
           get(input$plotTheme)()  # Apply selected theme
-        print(plot)
+        print(plt)
       }
     }
   })
@@ -462,16 +479,6 @@ server <- function(input, output, session) {
       updateSliderInput(session, "pointStyle", value = 16, min = 0, max = 18, step = 1)
       updateSliderInput(session, "lineWidth", value = 1, min = 0.1, max = 5, step = 0.1)
     }
-  })
-  
-  # Observer: Save the plot on button click
-  observeEvent(input$downloadPlot, {
-    tryCatch({
-      ggsave("output_plot.png", plot = output$plot())
-      showModal(modalDialog("Plot saved as output_plot.png"))
-    }, error = function(e) {
-      showModal(modalDialog("Error saving plot. Please try again.", title = "Error"))
-    })
   })
 }
 
