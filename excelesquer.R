@@ -2,28 +2,32 @@ library(shiny)
 library(dplyr)
 library(haven)
 library(ggplot2)
+library(ggthemes)
+library(Rlab)
 
 # Example data for default plotting
-example <- data.frame("B(10, 0.5)" = rbinom(10, 100, 0.5),
+example <- data.frame("Bin(10, 0.5)" = rbinom(10, 100, 0.5),
+                      "Ber(0.5)" = rbern(100, 0.5),
                       "N(0,1)" = rnorm(100, 0, 1), 
                       "N(1,2)" = rnorm(100, 1, 2), 
                       "N(10,5)" = rnorm(100, 10, 5), 
                       "N(-10,5)" = rnorm(100, -10, 5), 
-                      "R(0,1)" = runif(100, 0, 1), 
-                      "R(1,2)" = runif(100, 1, 2), 
-                      "R(0,10)" = runif(100, 0, 10), 
-                      "R(-10,0)" = runif(100, -10, 0)
+                      "U(0,1)" = runif(100, 0, 1), 
+                      "U(1,2)" = runif(100, 1, 2), 
+                      "U(0,10)" = runif(100, 0, 10), 
+                      "U(-10,0)" = runif(100, -10, 0)
 )
 
-colnames(example) <- c("B(10, 0.5)", 
+colnames(example) <- c("Bin(10, 0.5)", 
+                       "Ber(0.5)", 
                        "N(0, 1)", 
                        "N(1, 2)", 
                        "N(10,5)", 
                        "N(-10,5)", 
-                       "R(0,1)", 
-                       "R(1,2)", 
-                       "R(0,10)", 
-                       "R(-10,0)")
+                       "U(0,1)", 
+                       "U(1,2)", 
+                       "U(0,10)", 
+                       "U(-10,0)")
 
 # Define UI
 ui <- fluidPage(
@@ -32,102 +36,150 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       # Input: File upload
-      fileInput("file", "Choose Data File", accept = c(".csv", ".xlsx", ".dta")),
+      fileInput("file", "Choose Data File:", accept = c(".csv", ".xlsx", ".dta")),
       
       # Input: Number of variables to plot
-      sliderInput("numVariables", "Number of Variables to Plot", 
-                  min = 1, max = 2, value = 1, step = 0.01, 
-                  ticks = FALSE), 
+      sliderInput("numVariables", "Number of Variables to Plot:", 
+                  min = 1, max = 4, value = 1, step = 1, 
+                  ticks = TRUE), 
       
       # Dynamic UI elements
       uiOutput("variableSelectionX"),
       uiOutput("variableSelectionY"),
+      uiOutput("variableSelectionZ"),
+      uiOutput("variableSelectionW"),
       uiOutput("plotTypeInput"),
       
       # Input: Theme selection
-      selectInput("plotTheme", "Select Plot Theme", 
-                  choices = c("theme_grey", "theme_bw", "theme_minimal", "theme_classic", "theme_linedraw", "theme_light", "theme_dark", "theme_void"),
+      selectInput("plotTheme", "Select Plot Theme:", 
+                  choices = c("theme_grey", 
+                              "theme_economist",
+                              "theme_tufte",
+                              "theme_base",
+                              "theme_cal",
+                              "theme_clean",
+                              "theme_excel",
+                              "theme_excel_new",
+                              "theme_few",
+                              "theme_fivethirtyeight",
+                              "theme_foundation",
+                              "theme_gdocs",
+                              "theme_igray",
+                              "theme_map",
+                              "theme_pander",
+                              "theme_par",
+                              "theme_solarized",
+                              "theme_solid",
+                              "theme_bw", 
+                              "theme_hc", 
+                              "theme_stata",
+                              "theme_minimal", 
+                              "theme_classic", 
+                              "theme_linedraw", 
+                              "theme_light", 
+                              "theme_dark", 
+                              "theme_void"),
                   selected = "theme_grey"),
       
       uiOutput("pointStyleInput"),
       
       # Conditional input for scatter plots and regression lines
       conditionalPanel(
-        condition = "input.plotType == 'scatter'",
+        condition = "input.plotType == 'scatter' & input.numVariables == '2'",
         checkboxInput("addLinearReg", "Add Linear Regression", value = FALSE),
         conditionalPanel(
           condition = "input.addLinearReg",
-          numericInput("regLineWidthLinear", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorLinear", "Regression Line Color:", value = "#ff0000"),
-          selectInput("regLineTypeLinear", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+          sliderInput("regLineWidthLinear", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorLinear", "Regression Line Colour:", value = "#ff0000"),
+          sliderInput("regLineTypeLinear", "Regression Line Type:", value = 1, min = 1, max = 6, step = 1)
         ),
         
         checkboxInput("addLogisticReg", "Add Logistic Regression", value = FALSE),
         conditionalPanel(
           condition = "input.addLogisticReg",
-          numericInput("regLineWidthLogistic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorLogistic", "Regression Line Color:", value = "#fff000"),
-          selectInput("regLineTypeLogistic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+          sliderInput("regLineWidthLogistic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorLogistic", "Regression Line Colour:", value = "#fff000"),
+          sliderInput("regLineTypeLogistic", "Regression Line Type:", value = 1, min = 1, max = 6, step = 1)
         ),
         
         checkboxInput("addQuadraticReg", "Add Quadratic Regression", value = FALSE),
         conditionalPanel(
           condition = "input.addQuadraticReg",
-          numericInput("regLineWidthQuadratic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorQuadratic", "Regression Line Color:", value = "#00ff00"),
-          selectInput("regLineTypeQuadratic", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+          sliderInput("regLineWidthQuadratic", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorQuadratic", "Regression Line Colour:", value = "#00ff00"),
+          sliderInput("regLineTypeQuadratic", "Regression Line Type:", value = 1, min = 1, max = 6, step = 1)
         ),
         
         checkboxInput("addPolyReg", "Add Fractional Polynomial Regression", value = FALSE),
         conditionalPanel(
           condition = "input.addPolyReg",
-          numericInput("regLineWidthPoly", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-          textInput("regLineColorPoly", "Regression Line Color:", value = "#0000ff"),
-          selectInput("regLineTypePoly", "Regression Line Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), selected = "solid")
+          sliderInput("regLineWidthPoly", "Regression Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+          textInput("regLineColorPoly", "Regression Line Colour:", value = "#0000ff"),
+          sliderInput("regLineTypePoly", "Regression Line Type:", value = 1, min = 1, max = 6, step = 1)
         )
       ),
       
       # Conditional input for scatter plots
       conditionalPanel(
-        condition = "input.plotType == 'scatter'",
-        checkboxInput("addJitter", "Add Jitter?", value = FALSE),
-        numericInput("pointSize", "Point Size:", value = 1),
-        textInput("pointColor", "Point Color:", value = "#f88379")
+        condition = "input.plotType == 'scatter' & input.numVariables == '2'",
+        checkboxInput("addJitter2", "Add Jitter?", value = FALSE),
+        sliderInput("pointSize2", "Point Size:", value = 3, min = 0.1, max = 10, step = 0.1, ticks = TRUE),
+        textInput("pointColor2", "Point Colour:", value = "#f88379")
+      ),
+      
+      # Conditional input for scatter plots
+      conditionalPanel(
+        condition = "input.plotType == 'scatter' & input.numVariables == '3'",
+        checkboxInput("addJitter3", "Add Jitter?", value = FALSE),
+        textInput("gradTitle3", "Gradient Label:", value = "Gradient"),
+        sliderInput("pointSize3", "Point Size:", value = 3, min = 0.1, max = 10, step = 0.1, ticks = TRUE),
+        textInput("gradLow3", "Gradient Low:", value = "#abcdef"),
+        textInput("gradHigh3", "Gradient High:", value = "#123456")
+      ),
+     
+      # Conditional input for scatter plots
+      conditionalPanel(
+        condition = "input.plotType == 'scatter' & input.numVariables == '4'",
+        checkboxInput("addJitter4", "Add Jitter?", value = FALSE),
+        textInput("gradTitle4", "Gradient Label:", value = "Gradient"),
+        textInput("sizeTitle4", "Size Label:", value = "Size"),
+        textInput("gradLow4", "Gradient Low:", value = "#abcdef"),
+        textInput("gradHigh4", "Gradient High:", value = "#123456")
       ),
       
       # Conditional input for line plots
       conditionalPanel(
         condition = "input.plotType == 'line'",
-        numericInput("lineWidth", "Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
-        textInput("lineColor", "Line Color:", value = "#f88379")
+        sliderInput("lineWidth", "Line Width:", value = 1, min = 0.1, max = 5, step = 0.1),
+        textInput("lineColor", "Line Colour:", value = "#f88379")
       ),
       
       # Conditional input for histograms and density plots
       conditionalPanel(
-        condition = "input.plotType == 'histogram' || input.plotType == 'density'",
-        textInput("fillColor", "Fill Color:", value = "#f88379"),
+        condition = "input.plotType == 'histogram' | input.plotType == 'density'",
+        textInput("fillColor", "Fill Colour:", value = "#f88379"),
         sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
       
       # Conditional input for histograms
       conditionalPanel(
         condition = "input.plotType == 'histogram'",
-        sliderInput("binWidth", "Bin Width", min = 1, max = 30, value = 15, step = 1)
+        sliderInput("binWidth", "Bin Width:", min = 1, max = 30, value = 15, step = 1)
       ),
       
       # Conditional input for box plots
       conditionalPanel(
         condition = "input.plotType == 'boxplot' & input.numVariables == '1'",
-        textInput("boxFillColor", "Box Fill Color:", value = "#f88379"),
-        textInput("boxColor", "Outline Color:", value = "#000000"),
-        textInput("boxOutlierColor", "Outlier Color:", value = "#f88379"),
+        textInput("boxFillColor", "Box Fill Colour:", value = "#f88379"),
+        textInput("boxColor", "Outline Colour:", value = "#000000"),
+        textInput("boxOutlierColor", "Outlier Colour:", value = "#f88379"),
       ),
       
       # Conditional input for box plots
       conditionalPanel(
         condition = "input.plotType == 'boxplot' & input.numVariables == '2'",
-        textInput("vioFillCol", "Select Violin Colour", value = "#f88379"),
-        textInput("boxColor2", "Outline Color:", value = "#ffffff"),
+        textInput("vioFillCol", "Select Violin Colour:", value = "#f88379"),
+        textInput("boxColor2", "Outline Colour:", value = "#ffffff"),
         sliderInput("boxWidth2", "Box Width:", min = 0, max = 1, value = 0.1, step = 0.1),
         sliderInput("vioWidth", "Violin Width:", min = 0, max = 2, value = 1, step = 0.1)
       ),
@@ -136,7 +188,11 @@ ui <- fluidPage(
       # X-axis
       textInput("xTitle", "X-axis Label:", value = "X-axis Label"),
       # Y-axis
-      textInput("yTitle", "Y-axis Label:", value = "Y-axis Label"),
+      conditionalPanel(
+        condition = "input.numVariables == '2' | input.numVariables == '3' | input.numVariables == '4'",
+        textInput("yTitle", "Y-axis Label:", value = "Y-axis Label")
+        ),
+      
       
       # Input: Plot title
       textInput("plotTitle", "Plot Title:", value = "Plot Title"),
@@ -172,7 +228,15 @@ server <- function(input, output, session) {
   # Dynamic UI element: Select variable for X-axis
   output$variableSelectionX <- renderUI({
     variables <- names(data())
-    if (input$numVariables == 2) {
+    if (input$numVariables == 4) {
+      selectInput("selectedVariableX", "Select Variable for X-axis", 
+                  choices = variables, 
+                  selected = variables[1])
+    } else if (input$numVariables == 3) {
+      selectInput("selectedVariableX", "Select Variable for X-axis", 
+                  choices = variables, 
+                  selected = variables[1])
+    } else if (input$numVariables == 2) {
       selectInput("selectedVariableX", "Select Variable for X-axis", 
                   choices = variables, 
                   selected = variables[1])
@@ -185,7 +249,17 @@ server <- function(input, output, session) {
   
   # Dynamic UI element: Select variable for Y-axis (only for 2-variable plots)
   output$variableSelectionY <- renderUI({
-    if (input$numVariables == 2) {
+    if (input$numVariables == 4) {
+      variables <- names(data())
+      selectInput("selectedVariableY", "Select Variable for Y-axis", 
+                  choices = variables, 
+                  selected = variables[2])
+    }else if (input$numVariables == 3) {
+      variables <- names(data())
+      selectInput("selectedVariableY", "Select Variable for Y-axis", 
+                  choices = variables, 
+                  selected = variables[2])
+    } else if (input$numVariables == 2){
       variables <- names(data())
       selectInput("selectedVariableY", "Select Variable for Y-axis", 
                   choices = variables, 
@@ -193,26 +267,51 @@ server <- function(input, output, session) {
     }
   })
   
+  output$variableSelectionZ <- renderUI({
+    if (input$numVariables == 4) {
+      variables <- names(data())
+      selectInput("selectedVariableZ", "Select Gradient Variable", 
+                  choices = variables, 
+                  selected = variables[3])
+    } else if (input$numVariables == 3) {
+      variables <- names(data())
+      selectInput("selectedVariableZ", "Select Gradient Variable", 
+                  choices = variables, 
+                  selected = variables[3])
+    }
+  })
+  
+  output$variableSelectionW <- renderUI({
+    if (input$numVariables == 4) {
+      variables <- names(data())
+      selectInput("selectedVariableW", "Select Size Variable", 
+                  choices = variables, 
+                  selected = variables[4])
+    }
+  })
+  
   # Dynamic UI element: Select plot type
   output$plotTypeInput <- renderUI({
-    if (input$numVariables == 2) {
-      selectInput("plotType", "Select Plot Type", choices = c("scatter", "line", "boxplot"))
+    if (input$numVariables == 4) {
+      selectInput("plotType", "Select Plot Type:", choices = c("scatter"))
+    } else if (input$numVariables == 3) {
+      selectInput("plotType", "Select Plot Type:", choices = c("scatter"))
+    } else if (input$numVariables == 2) {
+      selectInput("plotType", "Select Plot Type:", choices = c("scatter", "line", "boxplot"))
     } else {
-      selectInput("plotType", "Select Plot Type", choices = c("histogram", "density", "boxplot"))
+      selectInput("plotType", "Select Plot Type:", choices = c("histogram", "density", "boxplot"))
     }
   })
   
   # Dynamic UI element: Select point or line style
   output$pointStyleInput <- renderUI({
-    if (input$numVariables == 2 && input$plotType %in% c("line", "scatter")) {
+    if (input$plotType %in% c("line", "scatter")) {
       if (input$plotType == "line") {
-        selectInput("lineStyle", "Line Style", 
-                    choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"),
-                    selected = "solid")
+        sliderInput("lineStyle", "Line Style:", value = 1, min = 1, max = 6, step = 1)
       } else if (input$plotType == "scatter") {
-        selectInput("pointStyle", "Point Style", 
-                    choices = c("circle", "square", "triangle", "diamond", "cross", "plus", "asterisk"),
-                    selected = "circle")
+        sliderInput("pointStyle", "Point Style:", 
+                    min = 0, max = 18, value = 16, step = 1, ticks = TRUE
+                    )
       }
     }
   })
@@ -220,27 +319,31 @@ server <- function(input, output, session) {
   # Output: Render the plot based on user inputs
   output$plot <- renderPlot({
     req(data())
-    
-    if (input$numVariables == 2) {
+    if (input$numVariables == 4) {
+      selected_vars <- data() %>% dplyr::select(input$selectedVariableX, input$selectedVariableY, input$selectedVariableZ, input$selectedVariableW)
+    }else if (input$numVariables == 3) {
+      selected_vars <- data() %>% dplyr::select(input$selectedVariableX, input$selectedVariableY, input$selectedVariableZ)
+    } else if (input$numVariables == 2) {
       selected_vars <- data() %>% dplyr::select(input$selectedVariableX, input$selectedVariableY)
     } else {
       selected_vars <- data() %>% dplyr::select(input$selectedVariableX)
     }
     
     if (input$plotType %in% c("scatter")) {
+      if (input$numVariables == 2) {
       plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
                                         y = !!sym(input$selectedVariableY))) +
-        geom_point(shape = input$pointStyle, size = input$pointSize, 
-                   color = input$pointColor, position = if (input$addJitter) "jitter" else "identity") +
+        geom_point(shape = input$pointStyle, size = input$pointSize2, 
+                   color = input$pointColor2, position = if (input$addJitter2) "jitter" else "identity") +
         geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
         geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "#000000", linetype = "dotted", size = 0.7) +
         annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = min(selected_vars[[input$selectedVariableY]]), 
-                 label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
+                 label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), vjust = 1.5, hjust = -0.05, angle = 90) +
         annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
-                 label = paste(round(mean(selected_vars[[input$selectedVariableY]]), 3)), vjust = 1.5, hjust = -0.5) +
+                 label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableY]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableY]])), 3), ")"), vjust = 1.5, hjust = -0.05) +
         labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
         get(input$plotTheme)()  # Apply selected theme
-      
+
       # Add regression lines based on checkboxes
       if (input$addLinearReg) {
         plot <- plot + geom_smooth(method = "lm", 
@@ -279,6 +382,28 @@ server <- function(input, output, session) {
                                                    "Quadratic" = input$regLineColorQuadratic,
                                                    "Fractional Polynomial" = input$regLineColorPoly),
                                         name = "Regression Line")
+      } else if (input$numVariables == 3) {
+        plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+                                          y = !!sym(input$selectedVariableY),
+                                          color = !!sym(input$selectedVariableZ))) +
+          geom_point(shape = input$pointStyle, size = input$pointSize3, 
+                     position = if (input$addJitter3) "jitter" else "identity") +
+          labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle, color = input$gradTitle3) +
+          get(input$plotTheme)()  # Apply selected theme
+        
+        plot <- plot  + scale_color_gradient(low = input$gradLow3, high = input$gradHigh3)
+      } else if (input$numVariables == 4) {
+        plot <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX), 
+                                          y = !!sym(input$selectedVariableY),
+                                          color = !!sym(input$selectedVariableZ), size = !!sym(input$selectedVariableW))) +
+          geom_point(shape = input$pointStyle, 
+                     position = if (input$addJitter4) "jitter" else "identity") +
+          labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle, color = input$gradTitle4, size = input$sizeTitle4) +
+          get(input$plotTheme)()  # Apply selected theme
+        
+        plot <- plot  + scale_color_gradient(low = input$gradLow4, high = input$gradHigh4) +
+          scale_size_continuous()
+      }
       print(plot)
     }
     else if (input$plotType %in% c("line")) {
@@ -304,7 +429,7 @@ server <- function(input, output, session) {
         labs(title = input$plotTitle, x = input$xTitle, y = "Density") +
         geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
         annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
-                 label = paste(round(mean(selected_vars[[input$selectedVariableX]]), 3)), vjust = 1.5, hjust = -0.5, angle = 90) +
+                 label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), vjust = 1.5, hjust = -0.05, angle = 90) +
         get(input$plotTheme)()  # Apply selected theme
       print(plot)
     }
@@ -329,21 +454,13 @@ server <- function(input, output, session) {
   # Observer: Change input options based on plot type
   observe({
     if (!is.null(input$plotType) && input$plotType %in% c("histogram", "density", "boxplot")) {
-      updateNumericInput(session, "pointSize", value = NULL, min = NULL, max = NULL, step = NULL)
-      updateSelectInput(session, "pointStyle", choices = NULL, selected = NULL)
-      updateNumericInput(session, "lineWidth", value = NULL, min = NULL, max = NULL, step = NULL)
+      updateSliderInput(session, "pointSize", value = NULL, min = NULL, max = NULL, step = NULL)
+      updateSliderInput(session, "pointStyle", value = NULL, min = NULL, max = NULL, step = NULL)
+      updateSliderInput(session, "lineWidth", value = NULL, min = NULL, max = NULL, step = NULL)
     } else {
-      updateNumericInput(session, "pointSize", value = 1, min = 0, max = Inf, step = 0.1)
-      updateSelectInput(session, "pointStyle", choices = c("circle", "square", "triangle", "diamond", "cross", "plus", "asterisk"), selected = "circle")
-      updateNumericInput(session, "lineWidth", value = 1, min = 0.1, max = 5, step = 0.1)
-    }
-  })
-  
-  observe({
-    # Check if the slider is left in the middle
-    if(input$numVariables %% 1 != 0) {
-      # If left in the middle, round it to the nearest whole number
-      updateSliderInput(session, "numVariables", value = round(input$numVariables))
+      updateSliderInput(session, "pointSize", value = 3, min = 0.1, max = 10, step = 0.1)
+      updateSliderInput(session, "pointStyle", value = 16, min = 0, max = 18, step = 1)
+      updateSliderInput(session, "lineWidth", value = 1, min = 0.1, max = 5, step = 0.1)
     }
   })
   
