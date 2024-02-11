@@ -4,6 +4,7 @@ library(haven)
 library(ggplot2)
 library(ggthemes)
 library(Rlab)
+library(plotly)
 
 # Example data for default plotting
 example <- data.frame("Bin(10, 0.5)" = rbinom(10, 100, 0.5),
@@ -143,7 +144,6 @@ ui <- fluidPage(
         condition = "input.plotType == 'scatter' & input.numVariables == '4'",
         checkboxInput("addJitter4", "Add Jitter", value = FALSE),
         textInput("gradTitle4", "Gradient Label:", value = "Gradient"),
-        textInput("sizeTitle4", "Size Label:", value = "Size"),
         textInput("gradLow4", "Gradient Low:", value = "#abcdef"),
         textInput("gradHigh4", "Gradient High:", value = "#123456")
       ),
@@ -160,6 +160,7 @@ ui <- fluidPage(
         condition = "input.plotType == 'histogram' | input.plotType == 'density'",
         checkboxInput("addMeans", "Add Mean Line", value = TRUE),
         textInput("fillColor", "Fill Colour:", value = "#f88379"),
+        textInput("outColor", "Outline Colour:", value = "#000000"),
         sliderInput("alpha", "Alpha:", min = 0, max = 1, step = 0.1, value = 0.7)
       ),
       
@@ -173,17 +174,20 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "input.plotType == 'boxplot' & input.numVariables == '1'",
         textInput("boxFillColor", "Box Fill Colour:", value = "#f88379"),
-        textInput("boxColor", "Outline Colour:", value = "#000000"),
-        textInput("boxOutlierColor", "Outlier Colour:", value = "#f88379"),
+        textInput("boxColor", "Outline Colour:", value = "#000000")
       ),
       
       # Conditional input for box plots
       conditionalPanel(
         condition = "input.plotType == 'boxplot' & input.numVariables == '2'",
-        textInput("vioFillCol", "Select Violin Colour:", value = "#f88379"),
-        textInput("boxColor2", "Outline Colour:", value = "#ffffff"),
-        sliderInput("boxWidth2", "Box Width:", min = 0, max = 1, value = 0.1, step = 0.1),
-        sliderInput("vioWidth", "Violin Width:", min = 0, max = 2, value = 1, step = 0.1)
+        textInput("boxFillCol2", "Box Fill Colour:", value = "#f88379"),
+        textInput("boxColor2", "Outline Colour:", value = "#000000")
+      ),
+      
+      conditionalPanel(
+        condition = "input.plotType == 'violin'",
+        textInput("vioFillCol", "Violin Fill Colour:", value = "#f88379"),
+        textInput("vioColor", "Outline Colour:", value = "#000000")
       ),
       
       # Input: Axes labels
@@ -197,11 +201,16 @@ ui <- fluidPage(
       
       # Input: Plot title
       textInput("plotTitle", "Plot Title:", value = "Plot Title"),
+      
+      # Plot Dimensions
+      sliderInput("pltWidth", "Plot Width:", min = 50, max = 1500, value = 500, step = 50),
+      sliderInput("pltHeight", "Plot Height:", min = 50, max = 1500, value = 500, step = 50)
     ),
     
+
     # Output: Main panel for displaying the plot
     mainPanel(
-      plotOutput("plt")
+      plotlyOutput("plt")
     )
   )
 )
@@ -295,7 +304,7 @@ server <- function(input, output, session) {
     } else if (input$numVariables == 3) {
       selectInput("plotType", "Select Plot Type:", choices = c("scatter"))
     } else if (input$numVariables == 2) {
-      selectInput("plotType", "Select Plot Type:", choices = c("scatter", "line", "boxplot"))
+      selectInput("plotType", "Select Plot Type:", choices = c("scatter", "line", "boxplot", "violin"))
     } else {
       selectInput("plotType", "Select Plot Type:", choices = c("histogram", "density", "boxplot"))
     }
@@ -315,7 +324,7 @@ server <- function(input, output, session) {
   })
   
   # Output: Render the plot based on user inputs
-  output$plt <- renderPlot({
+  output$plt <- renderPlotly({
     req(data())
     if (input$numVariables == 4) {
       selected_vars <- data() %>% dplyr::select(input$selectedVariableX, input$selectedVariableY, input$selectedVariableZ, input$selectedVariableW)
@@ -339,13 +348,7 @@ server <- function(input, output, session) {
       # Add mean lines based on checkbox
       if (input$addMeans2) {
         plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
-          geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "#000000", linetype = "dotted", size = 0.7) +
-          annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = min(selected_vars[[input$selectedVariableY]]), 
-                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), 
-                   vjust = 1.5, hjust = -0.05, angle = 90) +
-          annotate("text", x = min(selected_vars[[input$selectedVariableX]]), y = mean(selected_vars[[input$selectedVariableY]]), 
-                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableY]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableY]])), 3), ")"), 
-                   vjust = 1.5, hjust = -0.05)
+          geom_hline(aes(yintercept = mean(!!sym(input$selectedVariableY))), colour = "#000000", linetype = "dotted", size = 0.7)
       }
 
       # Add regression lines based on checkboxes
@@ -406,8 +409,9 @@ server <- function(input, output, session) {
           get(input$plotTheme)()  # Apply selected theme
         
         plt <- plt  + scale_color_gradient(low = input$gradLow4, high = input$gradHigh4) +
-          scale_size_continuous()
+          scale_size_continuous(name = input$sizeTitle4)
       }
+      plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
       print(plt)
     }
     else if (input$plotType %in% c("line")) {
@@ -417,54 +421,65 @@ server <- function(input, output, session) {
                   color = input$lineColor) +
         labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
         get(input$plotTheme)()  # Apply selected theme
+      
+      plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
       print(plt)
     }
     else if (input$plotType %in% c("histogram")) {
       plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
-        geom_histogram(fill = input$fillColor, bins = input$binWidth,
+        geom_histogram(fill = input$fillColor, bins = input$binWidth, color = input$outColor,
                        alpha = input$alpha) +
         labs(title = input$plotTitle, x = input$xTitle, y = "Frequency") +
         get(input$plotTheme)()  # Apply selected theme
       
       # Add mean line based on checkbox
       if (input$addMeans) {
-        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
-          annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
-                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), 
-                   vjust = 1.5, hjust = -0.05, angle = 90)
+        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7)
       }
+      
+      plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
       print(plt)
     }
     else if (input$plotType %in% c("density")) {
       plt <- ggplot(selected_vars, aes(x = !!sym(input$selectedVariableX))) +
-        geom_density(fill = input$fillColor, alpha = input$alpha) +
+        geom_density(fill = input$fillColor, color = input$outColor, alpha = input$alpha) +
         labs(title = input$plotTitle, x = input$xTitle, y = "Density") +
         get(input$plotTheme)()  # Apply selected theme
       
       # Add mean line based on checkbox
       if (input$addMeans) {
-        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7) +
-          annotate("text", x = mean(selected_vars[[input$selectedVariableX]]), y = 0, 
-                   label = paste0("Mean: ", round(mean(selected_vars[[input$selectedVariableX]]), 3), " (SD ", round(sqrt(var(selected_vars[[input$selectedVariableX]])), 3), ")"), 
-                   vjust = 1.5, hjust = -0.05, angle = 90)
+        plt <- plt + geom_vline(aes(xintercept = mean(!!sym(input$selectedVariableX))), colour = "#000000", linetype = "dotted", size = 0.7)
       }
+      
+      plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
       print(plt)
     }
     else if (input$plotType %in% c("boxplot")) {
       if (input$numVariables == 1) {
         plt <- ggplot(selected_vars, aes(y = !!sym(input$selectedVariableX))) +
-          geom_boxplot(fill = input$boxFillColor, color = input$boxColor, outlier.color = input$boxOutlierColor, width = 0.5) +
+          geom_boxplot(fill = input$boxFillColor, color = input$boxColor, outlier.color = input$boxColor) +
           labs(title = input$plotTitle, y = input$yTitle) +
           get(input$plotTheme)()  # Apply selected theme
+        
+        plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
         print(plt)
       } else if (input$numVariables == 2) {
         plt <- ggplot(selected_vars, aes(x = as.factor(!!sym(input$selectedVariableX)), y = !!sym(input$selectedVariableY))) +
-          geom_violin(fill = input$vioFillCol, color = input$boxColor2, width = input$vioWidth) +
-          geom_boxplot(fill = input$vioFillCol, color = input$boxColor2, outlier.color = input$boxColor2, width = input$boxWidth2) +
+          geom_boxplot(fill = input$boxFillCol2, color = input$boxColor2, outlier.color = input$boxColor2) +
           labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
           get(input$plotTheme)()  # Apply selected theme
+        
+        plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
         print(plt)
-      }
+      } 
+    } else if (input$plotType %in% c("violin")) {
+      plt <- ggplot(selected_vars, aes(x = as.factor(!!sym(input$selectedVariableX)), y = !!sym(input$selectedVariableY))) +
+        geom_violin(fill = input$vioFillCol, color = input$vioColor, outlier.color = input$vioColor) +
+        labs(title = input$plotTitle, x = input$xTitle, y = input$yTitle) +
+        get(input$plotTheme)()
+      
+      plt <- ggplotly(plt, width = input$pltWidth, height = input$pltHeight)
+      print(plt)
     }
   })
   
